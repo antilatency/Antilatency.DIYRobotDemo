@@ -17,6 +17,7 @@ ExportedObj/
 *.suo
 *.tmp
 *.user
+*.log
 *.userprefs
 *.pidb
 *.booproj
