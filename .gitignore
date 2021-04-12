@@ -35,3 +35,11 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+.idea/.idea.TankDemo/riderModule.iml
+.idea/.idea.TankDemo/.idea/workspace.xml
+.idea/.idea.TankDemo/.idea/projectSettingsUpdater.xml
+.idea/.idea.TankDemo/.idea/modules.xml
+.idea/.idea.TankDemo/.idea/indexLayout.xml
+.idea/.idea.TankDemo/.idea/encodings.xml
+.idea/.idea.TankDemo/.idea/contentModel.xml
+.idea/.idea.TankDemo/.idea/codeStyles/codeStyleConfig.xml
