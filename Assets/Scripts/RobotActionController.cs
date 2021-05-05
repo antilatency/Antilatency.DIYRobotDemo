@@ -12,14 +12,14 @@ using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 
-public class TankActionController : MonoBehaviour
+public class RobotActionController : MonoBehaviour
 {
 
     public ControlType controlType = ControlType.Tracking;
     public DrawingType drawingType = DrawingType.Manual;
 
-    public GameObject GeneratedCups;
-    public GameObject ManualCups;
+    public GameObject generatedCups;
+    public GameObject manualCups;
     public Image progressBar;
     
 
@@ -27,8 +27,8 @@ public class TankActionController : MonoBehaviour
     
     public string backupFilePath = "currentState";
     public bool isMoving;
-    public TankTaskState tankTaskState = TankTaskState.Stop;
-    public TankSpeedConfiguration tankSpeedConfiguration = TankSpeedConfiguration.Default;
+    public RobotTaskState robotTaskState = RobotTaskState.Stop;
+    public RobotSpeedConfiguration robotSpeedConfiguration = RobotSpeedConfiguration.Default;
     
     public Transform targetTransform;
     public Transform tracksCenter;
@@ -53,13 +53,13 @@ public class TankActionController : MonoBehaviour
         Generated
     }
     
-    public void SetTankSpeedConfiguration(TankSpeedConfiguration tankSpeedConfiguration)
+    public void SetRobotSpeedConfiguration(RobotSpeedConfiguration robotSpeedConfiguration)
     {
-        this.tankSpeedConfiguration = tankSpeedConfiguration;
-        frequency = (uint)(tankSpeedConfiguration == TankSpeedConfiguration.Default || tankSpeedConfiguration == TankSpeedConfiguration.Medium ? 10000 : 20);
-        velocity = (tankSpeedConfiguration == TankSpeedConfiguration.Default ? .89f : tankSpeedConfiguration == TankSpeedConfiguration.Medium ? .815f :  .128f);
+        this.robotSpeedConfiguration = robotSpeedConfiguration;
+        frequency = (uint)(robotSpeedConfiguration == RobotSpeedConfiguration.Default || robotSpeedConfiguration == RobotSpeedConfiguration.Medium ? 10000 : 20);
+        velocity = (robotSpeedConfiguration == RobotSpeedConfiguration.Default ? .89f : robotSpeedConfiguration == RobotSpeedConfiguration.Medium ? .815f :  .128f);
         //todo check for uncleared cotask
-        GetComponent<TankExtensionBoard>().RecreateMotors();
+        GetComponent<RobotExtensionBoard>().RecreateMotors();
     }
 
     public Transform manipulatorTransform;
@@ -81,48 +81,25 @@ public class TankActionController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.W))
         {
-            GetComponent<TankTracking>().enabled = true;
+            GetComponent<RobotTracking>().enabled = true;
         }
         
         _time += Time.deltaTime;
         if (controlType == ControlType.Keyboard)
         {
 
-
-            if (Input.GetKeyDown(KeyCode.Alpha1))
-            {
-                pin1.gameObject.SetActive(true);
-            }
-
-            if (Input.GetKeyUp(KeyCode.Alpha1))
-            {
-                pin1.gameObject.SetActive(false);
-            }
-
-
-
-            if (Input.GetKeyDown(KeyCode.Alpha2))
-            {
-                pin2.gameObject.SetActive(true);
-            }
-
-            if (Input.GetKeyUp(KeyCode.Alpha2))
-            {
-                pin2.gameObject.SetActive(false);
-            }
-
             if (Input.GetKeyDown(KeyCode.E))
             {
 
-                SetTankSpeedConfiguration(TankSpeedConfiguration.Slow);
+                SetRobotSpeedConfiguration(RobotSpeedConfiguration.Slow);
             }
 
             if (Input.GetKeyUp(KeyCode.E))
             {
-                SetTankSpeedConfiguration(TankSpeedConfiguration.Default);
+                SetRobotSpeedConfiguration(RobotSpeedConfiguration.Default);
             }
         }
-        else GeneratedCups.GetComponent<MeshRenderer>().enabled = true;
+        else generatedCups.GetComponent<MeshRenderer>().enabled = true;
     }
 
     private Transform _targetTestPoint;
@@ -240,8 +217,8 @@ public class TankActionController : MonoBehaviour
 
         if (drawingType == DrawingType.Manual)
         {
-            ManualCups.SetActive(true);
-            GeneratedCups.SetActive(false);
+            manualCups.SetActive(true);
+            generatedCups.SetActive(false);
             var position = transform.position;
             Vector3 toPosition = (cupBaseTransform.position - position).normalized;
             Handles.Label(position + new Vector3(0, .1f,0), CustomMaths.GetAngle(transform, toPosition).ToString(CultureInfo.InvariantCulture));
@@ -260,8 +237,8 @@ public class TankActionController : MonoBehaviour
 
         else
         {
-            ManualCups.SetActive(false);
-            GeneratedCups.SetActive(true);
+            manualCups.SetActive(false);
+            generatedCups.SetActive(true);
             var positions = GetSortedPositionsFromVectors(Deserializer.GetPositions($"{Application.dataPath}\\cups.txt", multiplier));
         var minX  = positions[0].x;
         var maxX  = positions[0].x;
@@ -337,10 +314,6 @@ public class TankActionController : MonoBehaviour
     }
 
 
-    public Text pin1;
-    public Text pin2;
-
-
     private void Start()
     {
         _sortedPositions = new List<Transform>();
@@ -350,7 +323,7 @@ public class TankActionController : MonoBehaviour
                 x=> Vector3.Distance(x.position, cupBaseTransform.position)).ToList();
         }
         
-        _extensionBoard = GetComponent<TankExtensionBoard>();
+        _extensionBoard = GetComponent<RobotExtensionBoard>();
 
             
         _finalPositions =  GetSortedPositionsFromVectors(Deserializer.GetPositions($"{Application.dataPath}\\cups.txt", multiplier));
@@ -362,7 +335,7 @@ public class TankActionController : MonoBehaviour
 
     private List<Vector3> _finalPositions;
 
-    private TankExtensionBoard _extensionBoard;
+    private RobotExtensionBoard _extensionBoard;
 
 
 
@@ -379,7 +352,7 @@ public class TankActionController : MonoBehaviour
          {
              if (firstIndex == _finalPositions.Count)
              {
-                 SetTankTaskState(TankTaskState.Stop);
+                 SetRobotTaskState(RobotTaskState.Stop);
                  
                  yield break;
              }
@@ -399,20 +372,20 @@ public class TankActionController : MonoBehaviour
              var transform1 = transform;
              var toPosition = (cupBaseTransform.position - transform1.position).normalized;
              var angle = CustomMaths.GetAngle(transform1, toPosition);
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Medium);
-             SetTankTaskState(angle > 0 ? TankTaskState.TurningRight : TankTaskState.TurningLeft);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Medium);
+             SetRobotTaskState(angle > 0 ? RobotTaskState.TurningRight : RobotTaskState.TurningLeft);
              while (Mathf.Abs(CustomMaths.GetAngle(transform, toPosition)) > 4f)
              {
                  yield return new WaitForEndOfFrame();
              }
              
-             SetTankTaskState(TankTaskState.Stop);
+             SetRobotTaskState(RobotTaskState.Stop);
              
              yield return new WaitForSeconds(.7f);
              CustomMaths.SetEpsilon(.25f);
-             SetTankTaskState(TankTaskState.MovingToCup);
+             SetRobotTaskState(RobotTaskState.MovingToCup);
              
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Medium);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Medium);
              
              SetTargetPoint(cupBaseTransform);
              while (Vector3.Distance(manipulatorTransform.position, cupBaseTransform.position) >= .026f)
@@ -422,13 +395,13 @@ public class TankActionController : MonoBehaviour
              }
              
              
-             SetTankTaskState(TankTaskState.Stop);
+             SetRobotTaskState(RobotTaskState.Stop);
              yield return new WaitForSeconds(.5f);
              
 
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Default);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Default);
              
-             SetTankTaskState(TankTaskState.ForwardMove);
+             SetRobotTaskState(RobotTaskState.ForwardMove);
              
              
              yield return new WaitForSeconds(1.3f);
@@ -438,13 +411,13 @@ public class TankActionController : MonoBehaviour
              
              yield return new WaitForSeconds(.8f);
              
-             SetTankTaskState(TankTaskState.ReverseMove);
+             SetRobotTaskState(RobotTaskState.ReverseMove);
              yield return new WaitForSeconds(1f);
              
-             SetTankTaskState(TankTaskState.TurningRight);
+             SetRobotTaskState(RobotTaskState.TurningRight);
              yield return new WaitForSeconds(1f);
              
-             SetTankTaskState(TankTaskState.MovingToPlaceCup);
+             SetRobotTaskState(RobotTaskState.MovingToPlaceCup);
              
              SetTargetPoint(_finalPositions[firstIndex]);
              
@@ -456,7 +429,7 @@ public class TankActionController : MonoBehaviour
 
                  Debug.Log($"Distance left to current target = {Vector2.Distance(new Vector2(  manipulatorTransform.position.x, manipulatorTransform.position.z), new Vector2( _finalPositions[firstIndex].x, _finalPositions[firstIndex].z))}, target index = {firstIndex.ToString()}");
              }
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Slow);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Slow);
              _extensionBoard.SetFanRotation(true);
       
              float tmp = 0f;
@@ -473,17 +446,17 @@ public class TankActionController : MonoBehaviour
              var obj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
              obj.transform.localScale = Vector3.one *.07f;
              obj.transform.position = manipulatorTransform.position;
-             SetTankTaskState(TankTaskState.Stop);
+             SetRobotTaskState(RobotTaskState.Stop);
              _extensionBoard.SetFanRotation(false);
              yield return new WaitForSeconds(0.8f);
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Slow);
-             SetTankTaskState(TankTaskState.ReverseMove);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Slow);
+             SetRobotTaskState(RobotTaskState.ReverseMove);
              yield return new WaitForSeconds(2f);
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Default);
-             SetTankTaskState(TankTaskState.TurningRight);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Default);
+             SetRobotTaskState(RobotTaskState.TurningRight);
              yield return new WaitForSeconds(1f);
-             SetTankTaskState(TankTaskState.MovingToCup);
-             SetTankSpeedConfiguration(TankSpeedConfiguration.Default);
+             SetRobotTaskState(RobotTaskState.MovingToCup);
+             SetRobotSpeedConfiguration(RobotSpeedConfiguration.Default);
              firstIndex++;
          }
     }
@@ -509,11 +482,11 @@ public class TankActionController : MonoBehaviour
     }
 
     
-    private void SetTankTaskState(TankTaskState tankTaskState) =>
-        this.tankTaskState = tankTaskState;
+    private void SetRobotTaskState(RobotTaskState robotTaskState) =>
+        this.robotTaskState = robotTaskState;
 
 
-    public enum TankTaskState
+    public enum RobotTaskState
     {
         MovingToCup,
         MovingToPlaceCup,
@@ -524,7 +497,7 @@ public class TankActionController : MonoBehaviour
         ForwardMove
     }
 
-    public enum TankSpeedConfiguration
+    public enum RobotSpeedConfiguration
     {
         Default,
         Medium,

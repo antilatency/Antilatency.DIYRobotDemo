@@ -29,11 +29,11 @@ using Antilatency.HardwareExtensionInterface.Interop;
 using Antilatency.Integration;
 using UnityEngine.UI;
 
-// AHEI Library implemented to control tank.
-public sealed class TankExtensionBoard : MonoBehaviour
+// AHEI Library implemented to control robot.
+public sealed class RobotExtensionBoard : MonoBehaviour
 {
     
-    public DeviceNetwork Network;
+    public DeviceNetwork network;
 
     public string Tag;
 
@@ -50,7 +50,7 @@ public sealed class TankExtensionBoard : MonoBehaviour
         Init();
         
         
-        //Creating float buffer for calculating average voltage on tank battery
+        //Creating float buffer for calculating average voltage on robot battery
         _voltageBuffer = new Queue<float>(64);
         for (int i = 0; i < 64; i++)
             _voltageBuffer.Enqueue(11.8f);
@@ -58,7 +58,7 @@ public sealed class TankExtensionBoard : MonoBehaviour
 
     private void Init()
     {
-        if (Network == null)
+        if (network == null)
         {
             Debug.LogError("Network is null");
             return;
@@ -75,24 +75,24 @@ public sealed class TankExtensionBoard : MonoBehaviour
 
     private void OnEnable()
     {
-        if (Network == null)
+        if (network == null)
         {
             return;
         }
 
-        Network.DeviceNetworkChanged.AddListener(OnDeviceNetworkChanged);
+        network.DeviceNetworkChanged.AddListener(OnDeviceNetworkChanged);
 
         OnDeviceNetworkChanged();
     }
 
     private void OnDisable()
     {
-        if (Network == null)
+        if (network == null)
         {
             return;
         }
 
-        Network.DeviceNetworkChanged.RemoveListener(OnDeviceNetworkChanged);
+        network.DeviceNetworkChanged.RemoveListener(OnDeviceNetworkChanged);
 
         StopAhei();
     }
@@ -133,8 +133,8 @@ public sealed class TankExtensionBoard : MonoBehaviour
         
         //Initializing extension board connected devices
         
-        _mLeft = new Motor(_aheiCotask, _enaPin, _in1Pin, _in2Pin, TankActionController.frequency);
-        _mRight = new Motor(_aheiCotask, _enbPin, _in3Pin, _in4Pin, TankActionController.frequency);
+        _mLeft = new Motor(_aheiCotask, _enaPin, _in1Pin, _in2Pin, RobotActionController.frequency);
+        _mRight = new Motor(_aheiCotask, _enbPin, _in3Pin, _in4Pin, RobotActionController.frequency);
         _fanControl = _aheiCotask.createOutputPin(_fanPin, PinState.Low);
         _mBatterySense = new BatterySense(_aheiCotask, _batterySensePin);
         _aheiCotask.run();
@@ -183,19 +183,19 @@ public sealed class TankExtensionBoard : MonoBehaviour
 
     private INetwork GetNativeNetwork()
     {
-        if (Network == null)
+        if (network == null)
         {
             Debug.LogError("Network is null");
             return null;
         }
 
-        if (Network.NativeNetwork == null)
+        if (network.NativeNetwork == null)
         {
             Debug.LogError("Native network is null");
             return null;
         }
 
-        return Network.NativeNetwork;
+        return network.NativeNetwork;
     }
 
     private void StartAhei(NodeHandle node)
@@ -251,9 +251,9 @@ public sealed class TankExtensionBoard : MonoBehaviour
    private readonly Pins _fanPin = Pins.IOA4;
    
 
-    private Antilatency.Alt.Tracking.Stability Stability => GetComponent<TankTracking>().stability;
+    private Antilatency.Alt.Tracking.Stability Stability => GetComponent<RobotTracking>().stability;
 
-    private TankActionController TankActionController => GetComponent<TankActionController>();
+    private RobotActionController RobotActionController => GetComponent<RobotActionController>();
     
 
     public Text voltageText;
@@ -274,8 +274,8 @@ public sealed class TankExtensionBoard : MonoBehaviour
             var motor2Mode = Motor.Mode.Forward;
 
 
-            if (TankActionController.isMoving &&
-                TankActionController.tankTaskState == TankActionController.TankTaskState.TurningRight)
+            if (RobotActionController.isMoving &&
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.TurningRight)
             {
                 motor1Speed = .8f;
 
@@ -284,8 +284,8 @@ public sealed class TankExtensionBoard : MonoBehaviour
                 motor2Mode = Motor.Mode.Reverse;
             }
             
-            if (TankActionController.isMoving &&
-                TankActionController.tankTaskState == TankActionController.TankTaskState.TurningLeft)
+            if (RobotActionController.isMoving &&
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.TurningLeft)
             {
                 motor1Speed = .8f;
 
@@ -295,12 +295,12 @@ public sealed class TankExtensionBoard : MonoBehaviour
             }
             
             
-            if (TankActionController.isMoving &&
-                TankActionController.tankTaskState == TankActionController.TankTaskState.ForwardMove)
+            if (RobotActionController.isMoving &&
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.ForwardMove)
             {
-                motor1Speed = .95f * TankActionController.velocity;
+                motor1Speed = .95f * RobotActionController.velocity;
 
-                motor2Speed = .95f * TankActionController.velocity;
+                motor2Speed = .95f * RobotActionController.velocity;
                 
                 motor1Mode = Motor.Mode.Forward;
                 
@@ -310,25 +310,25 @@ public sealed class TankExtensionBoard : MonoBehaviour
             
             
 
-            if (TankActionController.isMoving &&
-                TankActionController.tankTaskState == TankActionController.TankTaskState.ReverseMove)
+            if (RobotActionController.isMoving &&
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.ReverseMove)
             {
-                motor1Speed = -.8f * TankActionController.velocity;
+                motor1Speed = -.8f * RobotActionController.velocity;
 
-                motor2Speed = -.8f * TankActionController.velocity;
+                motor2Speed = -.8f * RobotActionController.velocity;
                 
                 motor1Mode = Motor.Mode.Reverse;
                 
                 motor2Mode = Motor.Mode.Reverse;
             }
 
-            if (TankActionController.isMoving && (TankActionController.tankTaskState ==
-                TankActionController.TankTaskState.MovingToCup || TankActionController.tankTaskState ==
-                TankActionController.TankTaskState.MovingToPlaceCup))
+            if (RobotActionController.isMoving && (RobotActionController.robotTaskState ==
+                RobotActionController.RobotTaskState.MovingToCup || RobotActionController.robotTaskState ==
+                RobotActionController.RobotTaskState.MovingToPlaceCup))
             {
-                var speeds = CustomMaths.GetEfficientSpeeds(transform, TankActionController.targetTransform);
-                motor1Speed = speeds.LeftSpeed * TankActionController.velocity;
-                motor2Speed = speeds.RightSpeed * TankActionController.velocity;
+                var speeds = CustomMaths.GetEfficientSpeeds(transform, RobotActionController.targetTransform);
+                motor1Speed = speeds.LeftSpeed * RobotActionController.velocity;
+                motor2Speed = speeds.RightSpeed * RobotActionController.velocity;
 
                 motor1Mode = motor1Speed > 0 ? Motor.Mode.Forward : Motor.Mode.Reverse;
                 motor2Mode = motor2Speed > 0 ? Motor.Mode.Forward : Motor.Mode.Reverse;
@@ -336,7 +336,7 @@ public sealed class TankExtensionBoard : MonoBehaviour
                 motor2Speed = Math.Abs(motor2Speed);
 
             }
-            if (!TankActionController.isMoving || Stability.stage != Antilatency.Alt.Tracking.Stage.Tracking6Dof)
+            if (!RobotActionController.isMoving || Stability.stage != Antilatency.Alt.Tracking.Stage.Tracking6Dof)
             {
                 motor1Speed = 0;
                 motor2Speed = 0;
@@ -432,8 +432,8 @@ public sealed class TankExtensionBoard : MonoBehaviour
 
         var motor1Mode = motor1Speed > 0 ? Motor.Mode.Forward : Motor.Mode.Reverse;
         var motor2Mode = motor2Speed > 0 ? Motor.Mode.Forward : Motor.Mode.Reverse;
-        motor1Speed = Math.Abs(motor1Speed) * TankActionController.velocity;
-        motor2Speed = Math.Abs(motor2Speed) * TankActionController.velocity;
+        motor1Speed = Math.Abs(motor1Speed) * RobotActionController.velocity;
+        motor2Speed = Math.Abs(motor2Speed) * RobotActionController.velocity;
 
         _mLeft.setMode(motor1Mode);
         _mRight.setMode(motor2Mode);
@@ -444,9 +444,9 @@ public sealed class TankExtensionBoard : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (TankActionController.controlType == TankActionController.ControlType.Keyboard)
+        if (RobotActionController.controlType == RobotActionController.ControlType.Keyboard)
             KeyboardControl();
-        if (TankActionController.controlType == TankActionController.ControlType.Tracking)
+        if (RobotActionController.controlType == RobotActionController.ControlType.Tracking)
             DefaultControl();
         
         UpdateBuffer(getBatterySense());

@@ -12,20 +12,17 @@
 using Antilatency.Alt.Tracking;
 using Antilatency.Integration;
 
-public class TankTracking : AltTrackingTag {
+public class RobotTracking : AltTrackingTag {
     protected override void Update() {
         base.Update();
-
         if (!GetTrackingState(out var trackingState)) {
             stability = new Stability();
             return;
         }
-
         stability = trackingState.stability;
-        var tankTransform = transform;
-        tankTransform.localPosition = trackingState.pose.position;
-        tankTransform.localRotation = trackingState.pose.rotation;
+        var robotTransform = transform;
+        robotTransform.localPosition = trackingState.pose.position;
+        robotTransform.localRotation = trackingState.pose.rotation;
     }
-
     public Stability stability;
 }
