@@ -1,31 +1,25 @@
 ﻿using UnityEngine;
 
-public static class CustomMaths
-{
-    public struct WheelsSpeed
-    {
+public static class CustomMaths {
+    public struct WheelsSpeed {
         public float LeftSpeed;
         public float RightSpeed;
     }
-
-    public static void SetEpsilon(float value)=>
-        _e = value;
-    
     private static float _e = .25f;
-    public static WheelsSpeed GetEfficientSpeeds(Transform tank, Transform target, bool drawGizmos = false)
-    {
+
+    public static void SetEpsilon(float value) => _e = value;
+    
+    public static WheelsSpeed GetEfficientSpeeds(Transform tank, Transform target, bool drawGizmos = false) {
         var forward1 = tank.forward;
         Vector2 forward = new Vector2(forward1.x, forward1.z);
         forward.Normalize();
-
+        
         var right1 = tank.right;
         Vector2 right = new Vector2(right1.x, right1.z);
         right.Normalize();
-
+        
         var position = tank.position;
         Vector2 tankPosition = new Vector2(position.x, position.z);
-        
-        //float e = 0.25f;
         Vector2 eVector = _e * forward;
         Vector2 manipulatorPosition = tankPosition + eVector;
         var position1 = target.position;
@@ -38,8 +32,7 @@ public static class CustomMaths
         float k2 = k * k;
         float radius = Mathf.Sqrt(k2 * _e * _e / (1 - k2));
         float sqrCurvature = (1 - k2) / (k2 * _e * _e);
-        if (sqrCurvature < 0)
-            sqrCurvature = 0;
+        if (sqrCurvature < 0) sqrCurvature = 0;
 
         float curvature = Mathf.Sqrt(sqrCurvature);
 
@@ -53,39 +46,32 @@ public static class CustomMaths
             leftVelocity = 1 + wHalf * curvature;
             rightVelocity = 1 - wHalf * curvature;
         }
-
         if (tauLocalZ > 0 && tauLocalX <= 0) {
             radius = -radius;
             curvature = -curvature;
             leftVelocity = 1 + wHalf * curvature;
             rightVelocity = 1 - wHalf * curvature;
         }
-
         if (tauLocalZ < 0 && tauLocalX > 0) {
             radius = -radius;
             curvature = -curvature;
             leftVelocity = -(1 + wHalf * curvature);
             rightVelocity = -(1 - wHalf * curvature);
         }
-
-        if (tauLocalZ < 0 && tauLocalX <= 0)
-        {
+        if (tauLocalZ < 0 && tauLocalX <= 0) {
             leftVelocity = -(1 + wHalf * curvature);
             rightVelocity = -(1 - wHalf * curvature);
         }
-        
 
         float absLeftVelocity = Mathf.Abs(leftVelocity);
         float absRightVelocity = Mathf.Abs(rightVelocity);
         float absMaxVelocity = Mathf.Max(absLeftVelocity, absRightVelocity);
-
         float maxVelocity = 1;
         if (absMaxVelocity > maxVelocity) {
             float scale = maxVelocity / absMaxVelocity;
             leftVelocity *= scale;
             rightVelocity *= scale;
         }
-        
         if (drawGizmos) {
             Vector3 tankPosition3 = new Vector3(tankPosition.x, 0, tankPosition.y);
             Vector3 manipulatorPosition3 = new Vector3(manipulatorPosition.x, 0, manipulatorPosition.y);
@@ -108,5 +94,4 @@ public static class CustomMaths
         };
     }
     public static float GetAngle(Transform origin, Vector3 toPosition) => Vector3.SignedAngle(origin.forward, toPosition, Vector3.up);
-
 }

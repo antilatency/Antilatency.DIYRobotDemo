@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-public static class Deserializer
-{
-    public static List<Vector3> GetPositions(string path, float multiplier)
-    {
+public static class Deserializer {
+    public static List<Vector3> GetPositions(string path, float multiplier) {
         var cups = new List<Vector3>();
         using(var fs = new FileStream(path, FileMode.Open))
-            try
-            {
+            try {
                 var reader = new BinaryReader(fs);
                 while(reader.BaseStream.Position != reader.BaseStream.Length){
                     var x = reader.ReadSingle();

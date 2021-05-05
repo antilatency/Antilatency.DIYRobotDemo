@@ -32,120 +32,69 @@ using UnityEngine.UI;
 // AHEI Library implemented to control robot.
 public sealed class RobotExtensionBoard : MonoBehaviour
 {
-    
     public DeviceNetwork network;
-
     public string Tag;
-
     private Antilatency.HardwareExtensionInterface.ILibrary _aheiLibrary;
-
     private NodeHandle _aheiNode;
-
     private Antilatency.HardwareExtensionInterface.ICotask _aheiCotask;
-    
     private Queue<float> _voltageBuffer;
 
-    private void Awake()
-    {
+    private void Awake() {
         Init();
-        
-        
         //Creating float buffer for calculating average voltage on robot battery
         _voltageBuffer = new Queue<float>(64);
-        for (int i = 0; i < 64; i++)
+        for (int i = 0; i < _voltageBuffer.Count; i++)
             _voltageBuffer.Enqueue(11.8f);
     }
-
-    private void Init()
-    {
-        if (network == null)
-        {
+    private void Init() {
+        if (network == null) {
             Debug.LogError("Network is null");
             return;
         }
-
         _aheiLibrary = Antilatency.HardwareExtensionInterface.Library.load();
-
-        if (_aheiLibrary == null)
-        {
-            Debug.LogError("Failed to create hardware extension interface library");
-            return;
-        }
+        if (_aheiLibrary != null) return;
+        Debug.LogError("Failed to create hardware extension interface library");
     }
 
-    private void OnEnable()
-    {
-        if (network == null)
-        {
-            return;
-        }
-
+    private void OnEnable() {
+        if (network == null) return;
         network.DeviceNetworkChanged.AddListener(OnDeviceNetworkChanged);
-
         OnDeviceNetworkChanged();
     }
 
-    private void OnDisable()
-    {
-        if (network == null)
-        {
-            return;
-        }
-
+    private void OnDisable() {
+        if (network == null) return;
         network.DeviceNetworkChanged.RemoveListener(OnDeviceNetworkChanged);
-
         StopAhei();
     }
 
-    private void OnDeviceNetworkChanged()
-    {
-        if (_aheiCotask != null)
-        {
-            if (_aheiCotask.isTaskFinished())
-            {
-                StopAhei();
-            }
-            else
-            {
-                return;
-            }
+    private void OnDeviceNetworkChanged() {
+        if (_aheiCotask != null) {
+            if (_aheiCotask.isTaskFinished()) StopAhei();
+            else return;
         }
-
         if (_aheiCotask != null) return;
         var node = GetAvailableAheiNode();
-        if (node != NodeHandle.Null)
-        {
-            StartAhei(node);
-        }
+        if (node != NodeHandle.Null) StartAhei(node);
     }
 
-    private void Update()
-    {
-        if (_aheiCotask != null && _aheiCotask.isTaskFinished())
-        {
+    private void Update() {
+        if (_aheiCotask != null && _aheiCotask.isTaskFinished()) {
             StopAhei();
         }
     }
-
-    // Running ahei examples
-    private void RunAhei()
-    {
-        
-        //Initializing extension board connected devices
-        
+    
+    //Initializing extension board connected devices
+    private void RunAhei() {
         _mLeft = new Motor(_aheiCotask, _enaPin, _in1Pin, _in2Pin, RobotActionController.frequency);
         _mRight = new Motor(_aheiCotask, _enbPin, _in3Pin, _in4Pin, RobotActionController.frequency);
         _fanControl = _aheiCotask.createOutputPin(_fanPin, PinState.Low);
         _mBatterySense = new BatterySense(_aheiCotask, _batterySensePin);
         _aheiCotask.run();
-
     }
-
-    public void RecreateMotors()
-    {
-        
-        //"Rebooting" extension board
-        
+    
+    //"Rebooting" extension board
+    public void RecreateMotors() {
         var tmp = _aheiNode;
         StopAhei();
         StartAhei(tmp);
@@ -155,118 +104,82 @@ public sealed class RobotExtensionBoard : MonoBehaviour
     private IOutputPin _fanControl;
     private Motor _mRight;
     private BatterySense _mBatterySense;
-
-    private float getBatterySense() =>
-        _mBatterySense.getVoltage();
-    
-
+    private float GetBatterySense() => _mBatterySense.GetVoltage();
 
     //Disposing cotasks
-    private void OnDestroy()
-    {
+    private void OnDestroy() {
         StopAllCoroutines();
-        
         if (_aheiCotask != null)
         {
             _aheiCotask.Dispose();
             _aheiCotask = null;
         }
-
-        if (_aheiLibrary != null)
-        {
-            _aheiLibrary.Dispose();
-            _aheiLibrary = null;
-   
-        }
-
+        if (_aheiLibrary == null) return;
+        _aheiLibrary.Dispose();
+        _aheiLibrary = null;
     }
 
-    private INetwork GetNativeNetwork()
-    {
-        if (network == null)
-        {
+    private INetwork GetNativeNetwork() {
+        if (network == null) {
             Debug.LogError("Network is null");
             return null;
         }
-
-        if (network.NativeNetwork == null)
-        {
+        if (network.NativeNetwork == null) {
             Debug.LogError("Native network is null");
             return null;
         }
-
         return network.NativeNetwork;
     }
 
-    private void StartAhei(NodeHandle node)
-    {
+    private void StartAhei(NodeHandle node) {
         var network = GetNativeNetwork();
         if (network == null)
-        {
             return;
-        }
-
-        if (network.nodeGetStatus(node) != NodeStatus.Idle)
-        {
+        
+        if (network.nodeGetStatus(node) != NodeStatus.Idle) {
             Debug.LogError("Wrong node status");
             return;
         }
-
-        using (var cotaskConstructor = _aheiLibrary.getCotaskConstructor())
-        {
+        using (var cotaskConstructor = _aheiLibrary.getCotaskConstructor()) {
             _aheiCotask = cotaskConstructor.startTask(network, node);
-
-            if (_aheiCotask == null)
-            {
+            if (_aheiCotask == null) {
                 StopAhei();
                 Debug.LogWarning("Failed to start hardware extension interface task on node " + node.value);
                 return;
             }
-
             _aheiNode = node;
-
             RunAhei();
         }
     }
 
-
     //Extension board connected devices pins
 
-   //Motor 1
-   private readonly Pins _enaPin = Pins.IO8;
-   private readonly Pins _in1Pin = Pins.IO1;
-   private readonly Pins _in2Pin = Pins.IO2;
+    //Motor 1
+    private readonly Pins _enaPin = Pins.IO8;
+    private readonly Pins _in1Pin = Pins.IO1;
+    private readonly Pins _in2Pin = Pins.IO2;
    
-   //Motor 2
-   private readonly Pins _enbPin = Pins.IO5;
-   private readonly Pins _in3Pin = Pins.IO7;
-   private readonly Pins _in4Pin = Pins.IO6;
+    //Motor 2
+    private readonly Pins _enbPin = Pins.IO5;
+    private readonly Pins _in3Pin = Pins.IO7;
+    private readonly Pins _in4Pin = Pins.IO6;
    
-   //Battery
-
-   private readonly Pins _batterySensePin = Pins.IOA3;
+    //Battery
+    private readonly Pins _batterySensePin = Pins.IOA3;
    
-   //Fan
-
-   private readonly Pins _fanPin = Pins.IOA4;
-   
-
-    private Antilatency.Alt.Tracking.Stability Stability => GetComponent<RobotTracking>().stability;
-
-    private RobotActionController RobotActionController => GetComponent<RobotActionController>();
+    //Fan
+    private readonly Pins _fanPin = Pins.IOA4;
     
+    private Antilatency.Alt.Tracking.Stability Stability => GetComponent<RobotTracking>().stability;
+    private RobotActionController RobotActionController => GetComponent<RobotActionController>();
 
     public Text voltageText;
-    private void DefaultControl()
-    {
-        if (_mBatterySense != null)
-        {
-            var voltage = _mBatterySense.getVoltage();
-            Debug.Log($"Battery {voltage} V");
+    private void DefaultControl() {
+        if (_mBatterySense != null) {
+            var voltage = _mBatterySense.GetVoltage();
             voltageText.text = $"Battery voltage : {voltage.ToString(CultureInfo.InvariantCulture)}V";
         }
-        if (_mLeft != null && _mRight != null && !_aheiCotask.isTaskFinished())
-        {
+        if (_mLeft != null && _mRight != null && !_aheiCotask.isTaskFinished()) {
             var motor1Speed = 0f;
             var motor2Speed = 0f;
 
@@ -275,20 +188,16 @@ public sealed class RobotExtensionBoard : MonoBehaviour
 
 
             if (RobotActionController.isMoving &&
-                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.TurningRight)
-            {
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.TurningRight) {
                 motor1Speed = .8f;
-
                 motor2Speed = .8f;
 
                 motor2Mode = Motor.Mode.Reverse;
             }
             
             if (RobotActionController.isMoving &&
-                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.TurningLeft)
-            {
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.TurningLeft) {
                 motor1Speed = .8f;
-
                 motor2Speed = .8f;
 
                 motor1Mode = Motor.Mode.Reverse;
@@ -296,14 +205,11 @@ public sealed class RobotExtensionBoard : MonoBehaviour
             
             
             if (RobotActionController.isMoving &&
-                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.ForwardMove)
-            {
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.ForwardMove) {
                 motor1Speed = .95f * RobotActionController.velocity;
-
                 motor2Speed = .95f * RobotActionController.velocity;
                 
                 motor1Mode = Motor.Mode.Forward;
-                
                 motor2Mode = Motor.Mode.Forward;
             }
             
@@ -311,21 +217,17 @@ public sealed class RobotExtensionBoard : MonoBehaviour
             
 
             if (RobotActionController.isMoving &&
-                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.ReverseMove)
-            {
+                RobotActionController.robotTaskState == RobotActionController.RobotTaskState.ReverseMove) {
                 motor1Speed = -.8f * RobotActionController.velocity;
-
                 motor2Speed = -.8f * RobotActionController.velocity;
                 
                 motor1Mode = Motor.Mode.Reverse;
-                
                 motor2Mode = Motor.Mode.Reverse;
             }
 
             if (RobotActionController.isMoving && (RobotActionController.robotTaskState ==
                 RobotActionController.RobotTaskState.MovingToCup || RobotActionController.robotTaskState ==
-                RobotActionController.RobotTaskState.MovingToPlaceCup))
-            {
+                RobotActionController.RobotTaskState.MovingToPlaceCup)) {
                 var speeds = CustomMaths.GetEfficientSpeeds(transform, RobotActionController.targetTransform);
                 motor1Speed = speeds.LeftSpeed * RobotActionController.velocity;
                 motor2Speed = speeds.RightSpeed * RobotActionController.velocity;
@@ -336,38 +238,30 @@ public sealed class RobotExtensionBoard : MonoBehaviour
                 motor2Speed = Math.Abs(motor2Speed);
 
             }
-            if (!RobotActionController.isMoving || Stability.stage != Antilatency.Alt.Tracking.Stage.Tracking6Dof)
-            {
+            if (!RobotActionController.isMoving || Stability.stage != Antilatency.Alt.Tracking.Stage.Tracking6Dof) {
                 motor1Speed = 0;
                 motor2Speed = 0;
             }
 
-
-            _mLeft.setMode(motor1Mode);
-            _mRight.setMode(motor2Mode);
-            
-            //Left border = 10.5, Right border = 12.6f;
-            _mLeft.setSpeed(Mathf.Abs(motor1Speed) * (0.9f + 0.1f * Mathf.Clamp((12.6f - _voltageBuffer.Average()) / (12.6f - 10.5f), 0, 1)));
-            _mRight.setSpeed(Mathf.Abs(motor2Speed) * (0.9f + 0.1f * Mathf.Clamp((12.6f - _voltageBuffer.Average()) / (12.6f - 10.5f), 0, 1)));
+            _mLeft.SetMode(motor1Mode);
+            _mRight.SetMode(motor2Mode);
+            _mLeft.SetSpeed(Mathf.Abs(motor1Speed) * (0.9f + 0.1f * Mathf.Clamp((12.6f - _voltageBuffer.Average()) / (12.6f - 10.5f), 0, 1)));
+            _mRight.SetSpeed(Mathf.Abs(motor2Speed) * (0.9f + 0.1f * Mathf.Clamp((12.6f - _voltageBuffer.Average()) / (12.6f - 10.5f), 0, 1)));
         }
     }
     
 
-    private void UpdateBuffer(float value)
-    {
+    private void UpdateBuffer(float value) {
         _voltageBuffer.Dequeue();
         _voltageBuffer.Enqueue(value);
     }
     
-    public void SetFanRotation(bool isRotating) =>
-        _fanControl.setState(isRotating ? PinState.High : PinState.Low);
+    public void SetFanRotation(bool isRotating) => _fanControl.setState(isRotating ? PinState.High : PinState.Low);
 
     //Keyboard control type
-    private void KeyboardControl()
-    {
-        if (_mBatterySense != null)
-        {
-            Debug.Log($"Battery {_mBatterySense.getVoltage()} V");
+    private void KeyboardControl() {
+        if (_mBatterySense != null) {
+            Debug.Log($"Battery {_mBatterySense.GetVoltage()} V");
         }
 
         _fanControl?.setState(Input.GetKey(KeyCode.Q) ? PinState.High : PinState.Low);
@@ -377,79 +271,65 @@ public sealed class RobotExtensionBoard : MonoBehaviour
         float motor2Speed;
 
 
-        if (Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D))
-        {
+        if (Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D)) {
             motor1Speed = 1f;
             motor2Speed = 1f;
         }
 
-        else if (Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.D))
-        {
+        else if (Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.D)) {
             motor1Speed = -1f;
             motor2Speed = -1f;
         }
 
-        else if (Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D))
-        {
+        else if (Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D)) {
             motor1Speed = -1f;
             motor2Speed = 1f;
         }
 
-        else if (Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.W))
-        {
+        else if (Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.W)) {
             motor1Speed = 1f;
             motor2Speed = -1f;
         }
 
-        else if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.S))
-        {
+        else if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.S)) {
             motor1Speed = .8f;
             motor2Speed = 1f;
         }
 
-        else if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S))
-        {
+        else if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S)) {
             motor1Speed = 1f;
             motor2Speed = .8f;
         }
 
-        else if (Input.GetKey(KeyCode.A) && Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.W))
-        {
+        else if (Input.GetKey(KeyCode.A) && Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D) && !Input.GetKey(KeyCode.W)) {
             motor1Speed = -.8f;
             motor2Speed = -1f;
         }
 
-        else if (Input.GetKey(KeyCode.D) && Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.A))
-        {
+        else if (Input.GetKey(KeyCode.D) && Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.W) && !Input.GetKey(KeyCode.A)) {
             motor1Speed = -1f;
             motor2Speed = -.8f;
         }
-        else
-        {
+        else {
             motor1Speed = 0;
             motor2Speed = 0;
         }
-
         var motor1Mode = motor1Speed > 0 ? Motor.Mode.Forward : Motor.Mode.Reverse;
         var motor2Mode = motor2Speed > 0 ? Motor.Mode.Forward : Motor.Mode.Reverse;
         motor1Speed = Math.Abs(motor1Speed) * RobotActionController.velocity;
         motor2Speed = Math.Abs(motor2Speed) * RobotActionController.velocity;
-
-        _mLeft.setMode(motor1Mode);
-        _mRight.setMode(motor2Mode);
-        _mLeft.setSpeed(Mathf.Abs(motor1Speed));
-        _mRight.setSpeed(Mathf.Abs(motor2Speed));
+        _mLeft.SetMode(motor1Mode);
+        _mRight.SetMode(motor2Mode);
+        _mLeft.SetSpeed(Mathf.Abs(motor1Speed));
+        _mRight.SetSpeed(Mathf.Abs(motor2Speed));
     }
-
-
-    private void FixedUpdate()
-    {
+    
+    private void FixedUpdate() {
         if (RobotActionController.controlType == RobotActionController.ControlType.Keyboard)
             KeyboardControl();
         if (RobotActionController.controlType == RobotActionController.ControlType.Tracking)
             DefaultControl();
-        
-        UpdateBuffer(getBatterySense());
+        UpdateBuffer(GetBatterySense());
     }
 
 
@@ -494,68 +374,46 @@ public sealed class RobotExtensionBoard : MonoBehaviour
         if (nodes.Length == 0) {
             return new NodeHandle();
         }
-
         var node = nodes.FirstOrDefault(h => nativeNetwork.nodeGetStringProperty(h, "Tag") == Tag);
         return node;
     }
 }
 
+public class BatterySense : IDisposable {
+    public BatterySense(Antilatency.HardwareExtensionInterface.ICotask cotask, Pins sensePin) => this._sensePin = cotask.createAnalogPin(sensePin, 10);
+    public void Dispose()=> _sensePin.Dispose();
 
-public class BatterySense : IDisposable
-{
-    public BatterySense(Antilatency.HardwareExtensionInterface.ICotask cotask, Pins sensePin)
-    {
-        this._sensePin = cotask.createAnalogPin(sensePin, 10);
-    }
-
-    public void Dispose()=>
-        _sensePin.Dispose();
-    
-
-    public float getVoltage()
-    {
-        const float rtop = 4700f;
-        const float rbottom = 330f;
-        
-        return _sensePin.getValue() * (rtop + rbottom) / rbottom;
+    public float GetVoltage() {
+        const float rTop = 4700f;
+        const float rBottom = 330f;
+        return _sensePin.getValue() * (rTop + rBottom) / rBottom;
     }
 
     readonly IAnalogPin _sensePin;
 }
-
-
-public class Motor : IDisposable
-{
-
-    public enum Mode
-    {
+public class Motor : IDisposable {
+    public enum Mode {
         Forward,
         Reverse,
         None
     }
 
-    public Motor(Antilatency.HardwareExtensionInterface.ICotask cotask, Pins en, Pins in1, Pins in2, uint frequency)
-    {
+    public Motor(Antilatency.HardwareExtensionInterface.ICotask cotask, Pins en, Pins in1, Pins in2, uint frequency) {
         this._en = cotask.createPwmPin(en, frequency, 0f);
         this._in1 = cotask.createOutputPin(in1, PinState.Low);
         this._in2 = cotask.createOutputPin(in2, PinState.Low);
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         _in1.Dispose();
         _in2.Dispose();
         _en.Dispose();
     }
     
-    public void setSpeed(float value)=>
-        _en.setDuty(value);
-    
+    public void SetSpeed(float value)=> _en.setDuty(value);
 
-    public void setMode(Motor.Mode mode)
-    {
-        switch (mode)
-        {
+    public void SetMode(Motor.Mode mode) {
+        switch (mode) {
             case Motor.Mode.Reverse:
                 _in1.setState(PinState.High);
                 _in2.setState(PinState.Low);
@@ -570,7 +428,6 @@ public class Motor : IDisposable
                 break;
         }
     }
-
     readonly IOutputPin _in1;
     readonly IOutputPin _in2;
     private readonly IPwmPin _en;
