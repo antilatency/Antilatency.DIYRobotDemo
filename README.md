@@ -1,2 +1,2 @@
-# Antilatency.TankDemo
- Source code for robo-tank demo video
+# Antilatency.DIYRobotDemo
+ Source code for the DIY robot demo video
